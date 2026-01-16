@@ -82,6 +82,7 @@
 #include "parserintf.h"
 #include "perlmodgen.h"
 #include "plantuml.h"
+#include "mermaid.h"
 #include "portable.h"
 #include "pre.h"
 #include "pycode.h"
@@ -13470,6 +13471,10 @@ void generateOutput()
 
   g_s.begin("Running plantuml with JAVA...\n");
   PlantumlManager::instance().run();
+  g_s.end();
+
+  g_s.begin("Running mermaid-cli...\n");
+  MermaidManager::instance().run();
   g_s.end();
 
   if (Config_getBool(HAVE_DOT))
