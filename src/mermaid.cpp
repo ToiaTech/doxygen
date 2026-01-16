@@ -120,8 +120,8 @@ StringVector MermaidManager::writeMermaidSource(const QCString &outDirArg,
   QCString imgName;
   QCString outDir(outDirArg);
 
-  Debug::print(Debug::Plantuml, 0, "*** writeMermaidSource fileName: {}\n", fileName);
-  Debug::print(Debug::Plantuml, 0, "*** writeMermaidSource outDir: {}\n", outDir);
+  Debug::print(Debug::Mermaid, 0, "*** writeMermaidSource fileName: {}\n", fileName);
+  Debug::print(Debug::Mermaid, 0, "*** writeMermaidSource outDir: {}\n", outDir);
 
   // strip any trailing slashes and backslashes
   size_t l = 0;
@@ -132,9 +132,9 @@ StringVector MermaidManager::writeMermaidSource(const QCString &outDirArg,
 
   generateMermaidFileNames(fileName, format, outDir, baseName, mmdName, imgName);
 
-  Debug::print(Debug::Plantuml, 0, "*** writeMermaidSource baseName: {}\n", baseName);
-  Debug::print(Debug::Plantuml, 0, "*** writeMermaidSource mmdName: {}\n", mmdName);
-  Debug::print(Debug::Plantuml, 0, "*** writeMermaidSource imgName: {}\n", imgName);
+  Debug::print(Debug::Mermaid, 0, "*** writeMermaidSource baseName: {}\n", baseName);
+  Debug::print(Debug::Mermaid, 0, "*** writeMermaidSource mmdName: {}\n", mmdName);
+  Debug::print(Debug::Mermaid, 0, "*** writeMermaidSource imgName: {}\n", imgName);
 
   // For mermaid, content is already the diagram definition
   QCString text = content;
@@ -147,7 +147,7 @@ StringVector MermaidManager::writeMermaidSource(const QCString &outDirArg,
   uint32_t pos = qcOutDir.findRev("/");
   QCString generateType(qcOutDir.right(qcOutDir.length() - (pos + 1)));
 
-  Debug::print(Debug::Plantuml, 0, "*** writeMermaidSource generateType: {}\n", generateType);
+  Debug::print(Debug::Mermaid, 0, "*** writeMermaidSource generateType: {}\n", generateType);
 
   insert(generateType.str(), mmdName.str(), outDir, format, text, srcFile, srcLine);
   baseNameVector.push_back(baseName.str());
@@ -207,7 +207,7 @@ void MermaidManager::insert(const std::string &key, const std::string &value,
                             const QCString &mmdContent,
                             const QCString &srcFile, int srcLine)
 {
-  Debug::print(Debug::Plantuml, 0, "*** MermaidManager::insert key:{}, value:{}\n", key, value);
+  Debug::print(Debug::Mermaid, 0, "*** MermaidManager::insert key:{}, value:{}\n", key, value);
 
   switch (format)
   {
@@ -305,7 +305,7 @@ static void runMermaidContent(const MermaidManager::FilesMap &mermaidFiles,
     // Skip regeneration if content hasn't changed
     if (cachedMd5 == md5Hash)
     {
-      Debug::print(Debug::Plantuml, 0, "*** MermaidManager: Skipping {} (unchanged)\n", mmdFileName);
+      Debug::print(Debug::Mermaid, 0, "*** MermaidManager: Skipping {} (unchanged)\n", mmdFileName);
       continue;
     }
 
@@ -329,7 +329,7 @@ static void runMermaidContent(const MermaidManager::FilesMap &mermaidFiles,
       }
     }
 
-    Debug::print(Debug::Plantuml, 0, "*** MermaidManager::run Running: {} {}\n",
+    Debug::print(Debug::Mermaid, 0, "*** MermaidManager::run Running: {} {}\n",
                  mermaidExe, mermaidArgs);
 
     if ((exitCode = Portable::system(mermaidExe.data(), mermaidArgs.data(), TRUE)) != 0)
@@ -362,7 +362,7 @@ static void runMermaidContent(const MermaidManager::FilesMap &mermaidFiles,
 
 void MermaidManager::run()
 {
-  Debug::print(Debug::Plantuml, 0, "*** MermaidManager::run\n");
+  Debug::print(Debug::Mermaid, 0, "*** MermaidManager::run\n");
   runMermaidContent(m_pngMermaidFiles, m_pngMermaidContent, MERMAID_PNG);
   runMermaidContent(m_svgMermaidFiles, m_svgMermaidContent, MERMAID_SVG);
   runMermaidContent(m_pdfMermaidFiles, m_pdfMermaidContent, MERMAID_PDF);
