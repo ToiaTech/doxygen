@@ -43,6 +43,7 @@ class DotCallGraph : public DotGraph
     QCString getBaseName() const override;
     QCString getMapLabel() const override;
     void computeTheGraph() override;
+    void computeTheMermaidGraph() override;
 
   private:
     void buildGraph(DotNode *n,const MemberDef *md,int distance);

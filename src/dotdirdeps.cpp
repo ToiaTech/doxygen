@@ -19,8 +19,11 @@
 #include "config.h"
 #include "image.h"
 #include "dotnode.h"
+#include "mermaidgraph.h"
+#include "textstream.h"
 
 #include <algorithm>
+#include <set>
 #include <iterator>
 #include <utility>
 #include <cstdint>
@@ -423,6 +426,71 @@ void DotDirDeps::computeTheGraph()
   writeDotDirDepGraph(md5stream,m_dir,m_linkRelations);
   writeGraphFooter(md5stream);
   m_theGraph = md5stream.str();
+}
+
+void DotDirDeps::computeTheMermaidGraph()
+{
+  TextStream t;
+
+  // Directory dependency graphs are top-down
+  MermaidGraph::writeHeader(t, MermaidGraph::FlowchartTD, m_dir->displayName());
+
+  // Track which directories we've written
+  std::set<std::string> writtenDirs;
+
+  // Write the main directory node
+  QCString dirId = MermaidGraph::escapeId(m_dir->getOutputFileBase());
+  MermaidGraph::writeNode(t, dirId, m_dir->shortName(), MermaidGraph::Box);
+  writtenDirs.insert(m_dir->getOutputFileBase().str());
+
+  // Write dependency relationships
+  for (const auto& usedDir : m_dir->usedDirs())
+  {
+    const DirDef *destDir = usedDir->dir();
+    if (!destDir->isParentOf(m_dir))
+    {
+      QCString destId = MermaidGraph::escapeId(destDir->getOutputFileBase());
+
+      // Write the destination node if not already written
+      if (writtenDirs.find(destDir->getOutputFileBase().str()) == writtenDirs.end())
+      {
+        MermaidGraph::writeNode(t, destId, destDir->shortName(), MermaidGraph::Box);
+        writtenDirs.insert(destDir->getOutputFileBase().str());
+      }
+
+      // Write the dependency edge
+      size_t nrefs = usedDir->filePairs().size();
+      QCString label;
+      label.setNum(static_cast<int>(nrefs));
+      MermaidGraph::writeEdge(t, dirId, destId, label);
+    }
+  }
+
+  // Handle subdirectories if within depth limit
+  if (m_dir->hasSubdirs() && m_dir->level() < Config_getInt(DIR_GRAPH_MAX_DEPTH))
+  {
+    // Write subgraph for subdirectories
+    MermaidGraph::writeSubgraphStart(t, dirId + "_sub", m_dir->shortName() + " subdirs");
+
+    for (const auto subDir : m_dir->subDirs())
+    {
+      QCString subDirId = MermaidGraph::escapeId(subDir->getOutputFileBase());
+      if (writtenDirs.find(subDir->getOutputFileBase().str()) == writtenDirs.end())
+      {
+        MermaidGraph::writeNode(t, subDirId, subDir->shortName(), MermaidGraph::Box);
+        writtenDirs.insert(subDir->getOutputFileBase().str());
+      }
+
+      // Add edge from parent to subdirectory
+      MermaidGraph::writeEdge(t, dirId, subDirId);
+    }
+
+    MermaidGraph::writeSubgraphEnd(t);
+  }
+
+  MermaidGraph::writeFooter(t);
+
+  m_theGraph = t.str();
 }
 
 QCString DotDirDeps::getMapLabel() const

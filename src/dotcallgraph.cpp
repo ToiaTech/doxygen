@@ -15,10 +15,15 @@
 
 #include "dotcallgraph.h"
 
+#include <functional>
+#include <set>
+
 #include "dotnode.h"
 #include "memberlist.h"
 #include "config.h"
 #include "util.h"
+#include "mermaidgraph.h"
+#include "textstream.h"
 
 static QCString getUniqueId(const MemberDef *md)
 {
@@ -173,6 +178,51 @@ void DotCallGraph::computeTheGraph()
     m_inverse,
     m_startNode->label(),
     m_theGraph);
+}
+
+void DotCallGraph::computeTheMermaidGraph()
+{
+  TextStream t;
+
+  // For call graphs: FlowchartLR (left to right - calls)
+  // For caller graphs: FlowchartRL (right to left - called by)
+  MermaidGraph::DiagramType diagramType = m_inverse ? MermaidGraph::FlowchartRL : MermaidGraph::FlowchartLR;
+  MermaidGraph::writeHeader(t, diagramType, m_startNode->label());
+
+  // Track which nodes we've written
+  std::set<int> writtenNodes;
+
+  // Helper lambda to write nodes and edges
+  std::function<void(DotNode*)> writeNodeMermaid = [&](DotNode *node)
+  {
+    if (!node || !node->isVisible()) return;
+    if (writtenNodes.count(node->number())) return;
+    writtenNodes.insert(node->number());
+
+    // Write the node
+    MermaidGraph::writeNode(t, QCString().setNum(node->number()),
+                            node->label(), MermaidGraph::Box);
+
+    // Write edges to children
+    for (const auto &child : node->children())
+    {
+      if (!child->isVisible()) continue;
+
+      // Write edge
+      MermaidGraph::writeEdge(t, QCString().setNum(node->number()),
+                              QCString().setNum(child->number()));
+
+      // Recursively write child nodes
+      writeNodeMermaid(child);
+    }
+  };
+
+  // Start with the root node
+  writeNodeMermaid(m_startNode);
+
+  MermaidGraph::writeFooter(t);
+
+  m_theGraph = t.str();
 }
 
 QCString DotCallGraph::getMapLabel() const

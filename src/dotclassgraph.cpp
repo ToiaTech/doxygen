@@ -14,6 +14,8 @@
 */
 
 #include <algorithm>
+#include <functional>
+#include <set>
 
 #include "containers.h"
 #include "dotclassgraph.h"
@@ -22,6 +24,7 @@
 
 #include "config.h"
 #include "util.h"
+#include "mermaidgraph.h"
 
 void DotClassGraph::addClass(const ClassDef *cd,DotNode *n,EdgeInfo::Colors color,
   const QCString &label,const QCString &usedName,const QCString &templSpec,bool base,int distance)
@@ -408,6 +411,139 @@ void DotClassGraph::computeTheGraph()
     m_startNode->label(),
     m_theGraph
   );
+}
+
+void DotClassGraph::computeTheMermaidGraph()
+{
+  TextStream t;
+
+  // Write Mermaid class diagram header
+  MermaidGraph::writeHeader(t, MermaidGraph::ClassDiagram, m_startNode->label());
+
+  // Track which nodes we've written to avoid duplicates
+  std::set<int> writtenNodes;
+
+  // Helper lambda to write a node and its relationships
+  std::function<void(DotNode*, bool)> writeNodeMermaid = [&](DotNode *node, bool writeChildren)
+  {
+    if (!node || !node->isVisible()) return;
+    if (writtenNodes.count(node->number())) return;
+    writtenNodes.insert(node->number());
+
+    // Write the class node (just the name for now, could add members later)
+    t << "    class " << MermaidGraph::escapeId(node->label()) << "\n";
+
+    // Write relationships to children (inheritance/collaboration)
+    if (writeChildren)
+    {
+      const auto &children = node->children();
+      const auto &edges = node->edgeInfo();
+
+      for (size_t i = 0; i < children.size(); i++)
+      {
+        DotNode *child = children[i];
+        if (!child->isVisible()) continue;
+
+        const EdgeInfo &ei = edges[i];
+
+        // Determine relationship type based on edge color
+        // Blue = public inheritance, Green = protected, Red = private
+        // Purple = usage/collaboration, Orange = template
+        switch (ei.color())
+        {
+          case EdgeInfo::Blue:   // public inheritance
+          case EdgeInfo::Green:  // protected inheritance
+          case EdgeInfo::Red:    // private inheritance
+            // For inheritance graphs: parent <|-- child
+            if (m_graphType == GraphType::Inheritance)
+            {
+              MermaidGraph::writeInheritance(t, child->label(), node->label());
+            }
+            break;
+          case EdgeInfo::Purple: // usage/collaboration
+            {
+              QCString label = ei.label();
+              if (label.isEmpty())
+              {
+                MermaidGraph::writeAssociation(t, node->label(), child->label());
+              }
+              else
+              {
+                MermaidGraph::writeAssociation(t, node->label(), child->label(), label);
+              }
+            }
+            break;
+          case EdgeInfo::Orange:  // template instantiation
+          case EdgeInfo::Orange2: // template constraint
+            {
+              QCString label = ei.label();
+              // Use dashed association for templates
+              t << "    " << MermaidGraph::escapeId(node->label())
+                << " ..> " << MermaidGraph::escapeId(child->label());
+              if (!label.isEmpty())
+              {
+                t << " : " << MermaidGraph::escapeLabel(label);
+              }
+              t << "\n";
+            }
+            break;
+          default:
+            MermaidGraph::writeAssociation(t, node->label(), child->label());
+            break;
+        }
+
+        // Recursively write children
+        writeNodeMermaid(child, true);
+      }
+    }
+
+    // For inheritance graphs, also write parent relationships
+    if (m_graphType == GraphType::Inheritance)
+    {
+      for (const auto &parent : node->parents())
+      {
+        if (parent->isVisible())
+        {
+          writeNodeMermaid(parent, false);
+        }
+      }
+    }
+  };
+
+  // Start with the root node
+  writeNodeMermaid(m_startNode, true);
+
+  // For inheritance graphs, also traverse parents
+  if (m_graphType == GraphType::Inheritance)
+  {
+    for (const auto &parent : m_startNode->parents())
+    {
+      if (parent->isVisible() && !writtenNodes.count(parent->number()))
+      {
+        // Write parent inheritance relationship
+        MermaidGraph::writeInheritance(t, m_startNode->label(), parent->label());
+
+        // Write the parent node
+        t << "    class " << MermaidGraph::escapeId(parent->label()) << "\n";
+        writtenNodes.insert(parent->number());
+
+        // Recursively write parent's parents
+        for (const auto &grandparent : parent->parents())
+        {
+          if (grandparent->isVisible() && !writtenNodes.count(grandparent->number()))
+          {
+            MermaidGraph::writeInheritance(t, parent->label(), grandparent->label());
+            t << "    class " << MermaidGraph::escapeId(grandparent->label()) << "\n";
+            writtenNodes.insert(grandparent->number());
+          }
+        }
+      }
+    }
+  }
+
+  MermaidGraph::writeFooter(t);
+
+  m_theGraph = t.str();
 }
 
 QCString DotClassGraph::getMapLabel() const

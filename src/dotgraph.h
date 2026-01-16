@@ -25,6 +25,7 @@
 
 class DotNode;
 class TextStream;
+class MermaidManager;
 
 enum class GraphOutputFormat    { BITMAP, EPS };
 enum class EmbeddedOutputFormat { Html, LaTeX, Rtf, DocBook };
@@ -75,8 +76,15 @@ class DotGraph
 
     virtual void computeTheGraph() = 0;
 
+    /** Compute the Mermaid graph representation (override in subclasses for Mermaid support) */
+    virtual void computeTheMermaidGraph();
+
+    /** Check if Mermaid output should be used */
+    static bool useMermaid();
+
     QCString absBaseName() const { return m_absPath + m_baseName; }
     QCString absDotName()  const { return m_absPath + m_baseName + ".dot"; }
+    QCString absMmdName()  const { return m_absPath + m_baseName + ".mmd"; }
     QCString imgName()     const;
     QCString absImgName()  const { return m_absPath + imgName(); }
     QCString relImgName()  const { return m_relPath + imgName(); }
@@ -102,10 +110,13 @@ class DotGraph
   private:
 
     bool prepareDotFile();
+    bool prepareMermaidFile();
     void generateCode(TextStream &t);
+    void generateMermaidCode(TextStream &t);
 
     int m_curNodeNumber = 0;
     int m_curEdgeNumber = 0;
+    bool m_useMermaid = false;
 };
 
 #endif

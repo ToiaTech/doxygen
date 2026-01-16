@@ -14,6 +14,8 @@
 */
 
 #include <sstream>
+#include <functional>
+#include <set>
 
 #include "dotgfxhierarchytable.h"
 #include "language.h"
@@ -23,6 +25,7 @@
 #include "classlist.h"
 #include "dir.h"
 #include "vhdldocgen.h"
+#include "mermaidgraph.h"
 
 QCString DotGfxHierarchyTable::getBaseName() const
 {
@@ -55,6 +58,57 @@ void DotGfxHierarchyTable::computeTheGraph()
   }
   writeGraphFooter(md5stream);
   m_theGraph = md5stream.str();
+}
+
+void DotGfxHierarchyTable::computeTheMermaidGraph()
+{
+  TextStream t;
+
+  // Class hierarchy uses left-to-right flowchart
+  MermaidGraph::writeHeader(t, MermaidGraph::FlowchartLR, theTranslator->trGraphicalHierarchy());
+
+  // Track which nodes we've written
+  std::set<int> writtenNodes;
+
+  // Helper lambda to write nodes and their children
+  std::function<void(DotNode*)> writeNodeMermaid = [&](DotNode *node)
+  {
+    if (!node) return;
+    if (node->subgraphId() != m_rootSubgraphNode->subgraphId()) return;
+    if (writtenNodes.count(node->number())) return;
+    writtenNodes.insert(node->number());
+
+    // Write the node
+    MermaidGraph::writeNode(t, QCString().setNum(node->number()),
+                            node->label(), MermaidGraph::Box);
+
+    // Write edges to children
+    for (const auto &child : node->children())
+    {
+      if (child->subgraphId() == m_rootSubgraphNode->subgraphId())
+      {
+        // Write edge
+        MermaidGraph::writeEdge(t, QCString().setNum(node->number()),
+                                QCString().setNum(child->number()));
+
+        // Recursively write child nodes
+        writeNodeMermaid(child);
+      }
+    }
+  };
+
+  // Write all root nodes in this subgraph
+  for (auto node : m_rootNodes)
+  {
+    if (node->subgraphId() == m_rootSubgraphNode->subgraphId())
+    {
+      writeNodeMermaid(node);
+    }
+  }
+
+  MermaidGraph::writeFooter(t);
+
+  m_theGraph = t.str();
 }
 
 QCString DotGfxHierarchyTable::getMapLabel() const

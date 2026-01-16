@@ -21,6 +21,7 @@
 #include "util.h"
 #include "config.h"
 #include "textstream.h"
+#include "mermaidgraph.h"
 
 DotGroupCollaboration::DotGroupCollaboration(const GroupDef* gd)
 {
@@ -239,6 +240,60 @@ void DotGroupCollaboration::computeTheGraph()
   writeGraphFooter(md5stream);
 
   m_theGraph = md5stream.str();
+}
+
+void DotGroupCollaboration::computeTheMermaidGraph()
+{
+  TextStream t;
+
+  // Group collaboration uses left-to-right flowchart
+  MermaidGraph::writeHeader(t, MermaidGraph::FlowchartLR, m_rootNode->label());
+
+  // Write all nodes
+  for (const auto &[name,node] : m_usedNodes)
+  {
+    MermaidGraph::writeNode(t, QCString().setNum(node->number()),
+                            node->label(), MermaidGraph::Box);
+  }
+
+  // Write edges with appropriate styles
+  for (const auto &edge : m_edges)
+  {
+    QCString fromId;
+    fromId.setNum(edge->pNStart->number());
+    QCString toId;
+    toId.setNum(edge->pNEnd->number());
+
+    // Determine if dashed based on edge type
+    bool dashed = (edge->eType != thierarchy);
+
+    // Build label from links
+    QCString label;
+    if (!edge->links.empty())
+    {
+      bool first = true;
+      int count = 0;
+      const int maxLabels = 5;
+      for (const auto &link : edge->links)
+      {
+        if (!first) label += ", ";
+        first = false;
+        label += link.label;
+        count++;
+        if (count >= maxLabels)
+        {
+          label += ", ...";
+          break;
+        }
+      }
+    }
+
+    MermaidGraph::writeEdge(t, fromId, toId, label, dashed);
+  }
+
+  MermaidGraph::writeFooter(t);
+
+  m_theGraph = t.str();
 }
 
 QCString DotGroupCollaboration::getMapLabel() const

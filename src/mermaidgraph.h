@@ -116,13 +116,13 @@ class MermaidGraph
                           const QCString &url,
                           const QCString &tooltip = QCString());
 
-  private:
     /** Escape special characters in labels for Mermaid */
     static QCString escapeLabel(const QCString &label);
 
     /** Create a valid Mermaid node ID */
     static QCString escapeId(const QCString &id);
 
+  private:
     /** Get shape delimiters for a given shape */
     static void getShapeDelimiters(NodeShape shape, QCString &open, QCString &close);
 };

@@ -44,6 +44,7 @@ class DotGfxHierarchyTable : public DotGraph
     QCString getBaseName() const override;
     QCString getMapLabel() const override;
     void computeTheGraph() override;
+    void computeTheMermaidGraph() override;
 
   private:
     void addHierarchy(DotNode *n,const ClassDef *cd,ClassDefSet &visited);

@@ -44,6 +44,7 @@ class DotDirDeps : public DotGraph
     QCString getBaseName() const override;
     QCString getMapLabel() const override;
     void computeTheGraph() override;
+    void computeTheMermaidGraph() override;
     QCString getImgAltText() const override;
 
   private:

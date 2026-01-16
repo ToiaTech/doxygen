@@ -30,6 +30,7 @@
 #include "dotfilepatcher.h"
 #include "fileinfo.h"
 #include "portable.h"
+#include "mermaid.h"
 
 #define MAP_CMD "cmapx"
 
@@ -133,17 +134,49 @@ QCString DotGraph::writeGraph(
   m_absPath  = m_dir.absPath() + "/";
   m_baseName = getBaseName();
 
-  computeTheGraph();
+  m_useMermaid = useMermaid();
 
-  m_regenerate = prepareDotFile();
-
-  if (!m_doNotAddImageToIndex)
+  if (m_useMermaid)
   {
-    std::lock_guard<std::mutex> lock(g_dotIndexListMutex);
-    Doxygen::indexList->addImageFile(imgName());
+    // Use Mermaid for graph generation
+    computeTheMermaidGraph();
+
+    if (!m_theGraph.isEmpty())
+    {
+      m_regenerate = prepareMermaidFile();
+
+      if (!m_doNotAddImageToIndex)
+      {
+        MermaidManager::OutputFormat format = MermaidManager::getOutputFormat();
+        QCString imgExt = MermaidManager::getExtension(format);
+        std::lock_guard<std::mutex> lock(g_dotIndexListMutex);
+        Doxygen::indexList->addImageFile(m_baseName + imgExt);
+      }
+
+      generateMermaidCode(t);
+    }
+    else
+    {
+      // Fall back to DOT if Mermaid graph computation returned empty
+      m_useMermaid = false;
+    }
   }
 
-  generateCode(t);
+  if (!m_useMermaid)
+  {
+    // Use traditional DOT/Graphviz for graph generation
+    computeTheGraph();
+
+    m_regenerate = prepareDotFile();
+
+    if (!m_doNotAddImageToIndex)
+    {
+      std::lock_guard<std::mutex> lock(g_dotIndexListMutex);
+      Doxygen::indexList->addImageFile(imgName());
+    }
+
+    generateCode(t);
+  }
 
   return m_baseName;
 }
@@ -351,5 +384,118 @@ void DotGraph::computeGraph(DotNode *root,
   writeGraphFooter(md5stream);
 
   graphStr=md5stream.str();
+}
+
+//--------------------------------------------------------------------
+
+bool DotGraph::useMermaid()
+{
+  return Config_getBool(USE_MERMAID);
+}
+
+//--------------------------------------------------------------------
+
+void DotGraph::computeTheMermaidGraph()
+{
+  // Default implementation: empty - subclasses should override this
+  // to provide Mermaid-specific graph generation
+  m_theGraph = "";
+}
+
+//--------------------------------------------------------------------
+
+bool DotGraph::prepareMermaidFile()
+{
+  if (!m_dir.exists())
+  {
+    term("Output dir {} does not exist!\n", m_dir.path());
+  }
+
+  char sigStr[33];
+  uint8_t md5_sig[16];
+  // calculate md5
+  MD5Buffer(m_theGraph.data(), static_cast<unsigned int>(m_theGraph.length()), md5_sig);
+  // convert result to a string
+  MD5SigToString(md5_sig, sigStr);
+
+  // Get the output format from Mermaid settings
+  MermaidManager::OutputFormat format = MermaidManager::getOutputFormat();
+  QCString imgExt = MermaidManager::getExtension(format);
+  QCString absOutputFile = m_absPath + m_baseName + imgExt;
+
+  if (sameMd5Signature(absBaseName(), sigStr) &&
+      deliverablesPresent(absOutputFile,
+                          m_graphFormat == GraphOutputFormat::BITMAP && m_generateImageMap ? absMapName() : QCString()
+                         )
+     )
+  {
+    // all needed files are there
+    return FALSE;
+  }
+
+  // need to rebuild the image
+  // Use MermaidManager to write and process the diagram
+  MermaidManager::instance().writeMermaidSource(m_absPath, m_baseName,
+                                                m_theGraph, format,
+                                                m_fileName, 0, false);
+
+  // Write MD5 signature
+  std::ofstream md5f = Portable::openOutputStream(absBaseName()+".md5");
+  if (md5f.is_open())
+  {
+    md5f << sigStr;
+    md5f.close();
+  }
+
+  return TRUE;
+}
+
+//--------------------------------------------------------------------
+
+void DotGraph::generateMermaidCode(TextStream &t)
+{
+  MermaidManager::OutputFormat format = MermaidManager::getOutputFormat();
+  QCString imgExt = MermaidManager::getExtension(format);
+
+  if (m_graphFormat==GraphOutputFormat::BITMAP && m_textFormat==EmbeddedOutputFormat::DocBook)
+  {
+    t << "<para>\n";
+    t << "    <informalfigure>\n";
+    t << "        <mediaobject>\n";
+    t << "            <imageobject>\n";
+    t << "                <imagedata";
+    t << " width=\"50%\" align=\"center\" valign=\"middle\" scalefit=\"0\" fileref=\"" << m_relPath << m_baseName << imgExt << "\">";
+    t << "</imagedata>\n";
+    t << "            </imageobject>\n";
+    t << "        </mediaobject>\n";
+    t << "    </informalfigure>\n";
+    t << "</para>\n";
+  }
+  else if (m_graphFormat==GraphOutputFormat::BITMAP && m_generateImageMap) // produce HTML to include the image
+  {
+    if (format == MermaidManager::MERMAID_SVG) // SVG image
+    {
+      if (!m_noDivTag) t << "<div class=\"center\">";
+      // For Mermaid SVG, use object tag for better rendering
+      t << "<object type=\"image/svg+xml\" data=\"" << m_relPath << m_baseName << imgExt << "\"";
+      t << " class=\"mermaidgraph\"></object>";
+      if (!m_noDivTag) t << "</div>\n";
+    }
+    else // PNG image
+    {
+      if (!m_noDivTag) t << "<div class=\"center\">";
+      t << "<img src=\"" << m_relPath << m_baseName << imgExt << "\" border=\"0\" alt=\"" << getImgAltText() << "\"/>";
+      if (!m_noDivTag) t << "</div>";
+      t << "\n";
+    }
+  }
+  else if (m_graphFormat==GraphOutputFormat::EPS) // produce tex to include the image
+  {
+    // For LaTeX, always use PNG format
+    t << "\\begin{figure}[H]\n";
+    t << "\\centering\n";
+    t << "\\includegraphics[width=0.8\\textwidth]{" << m_baseName << ".png}\n";
+    t << "\\end{figure}\n";
+  }
 }
 

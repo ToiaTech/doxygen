@@ -14,10 +14,15 @@
 */
 
 #include "dotincldepgraph.h"
+
+#include <functional>
+#include <set>
+
 #include "dotnode.h"
 #include "util.h"
 #include "config.h"
 #include "textstream.h"
+#include "mermaidgraph.h"
 
 void DotInclDepGraph::buildGraph(DotNode *n,const FileDef *fd,int distance)
 {
@@ -167,6 +172,52 @@ void DotInclDepGraph::computeTheGraph()
 {
   computeGraph(m_startNode, GraphType::Dependency, m_graphFormat, "", FALSE,
                m_inverse, m_startNode->label(), m_theGraph);
+}
+
+void DotInclDepGraph::computeTheMermaidGraph()
+{
+  TextStream t;
+
+  // Include dependency graphs are typically top-down
+  // For "includes" graph: this file includes others
+  // For "included by" graph: this file is included by others
+  MermaidGraph::DiagramType diagramType = m_inverse ? MermaidGraph::FlowchartBT : MermaidGraph::FlowchartTD;
+  MermaidGraph::writeHeader(t, diagramType, m_startNode->label());
+
+  // Track which nodes we've written
+  std::set<int> writtenNodes;
+
+  // Helper lambda to write nodes and edges
+  std::function<void(DotNode*)> writeNodeMermaid = [&](DotNode *node)
+  {
+    if (!node || !node->isVisible()) return;
+    if (writtenNodes.count(node->number())) return;
+    writtenNodes.insert(node->number());
+
+    // Write the node (use box shape for files)
+    MermaidGraph::writeNode(t, QCString().setNum(node->number()),
+                            node->label(), MermaidGraph::Box);
+
+    // Write edges to children
+    for (const auto &child : node->children())
+    {
+      if (!child->isVisible()) continue;
+
+      // Write edge
+      MermaidGraph::writeEdge(t, QCString().setNum(node->number()),
+                              QCString().setNum(child->number()));
+
+      // Recursively write child nodes
+      writeNodeMermaid(child);
+    }
+  };
+
+  // Start with the root node
+  writeNodeMermaid(m_startNode);
+
+  MermaidGraph::writeFooter(t);
+
+  m_theGraph = t.str();
 }
 
 QCString DotInclDepGraph::getMapLabel() const
