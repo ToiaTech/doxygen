@@ -4248,6 +4248,88 @@ to be found in the default search path.
 ]]>
       </docs>
     </option>
+    <!-- Mermaid configuration options -->
+    <option type='string' id='MERMAID_EXECUTABLE' format='file' defval=''>
+      <docs>
+<![CDATA[
+ When using Mermaid diagrams, the \c MERMAID_EXECUTABLE tag should be used to specify
+ the path to the mermaid-cli tool (\c mmdc). If left blank, Doxygen will attempt to
+ find \c mmdc in the system PATH. If not found, @startmermaid commands will generate
+ warnings and no output for the diagram.
+]]>
+      </docs>
+    </option>
+    <option type='string' id='MERMAID_CONFIG_FILE' format='file' defval=''>
+      <docs>
+<![CDATA[
+ When using Mermaid diagrams, the \c MERMAID_CONFIG_FILE tag can be used to specify
+ a JSON configuration file for the Mermaid CLI tool. This can specify puppeteer
+ configuration and mermaid rendering options.
+]]>
+      </docs>
+    </option>
+    <option type='enum' id='MERMAID_FORMAT' defval='svg'>
+      <docs>
+<![CDATA[
+ The \c MERMAID_FORMAT tag is used to set the output format for Mermaid diagrams.
+ SVG is recommended for HTML output as it provides the best quality and scalability.
+]]>
+      </docs>
+      <value name='svg'/>
+      <value name='png'/>
+      <value name='pdf'/>
+    </option>
+    <option type='enum' id='MERMAID_THEME' defval='base'>
+      <docs>
+<![CDATA[
+ The \c MERMAID_THEME tag specifies the theme to use for Mermaid diagrams.
+ The \c base theme corresponds to Mermaid's "default" theme.
+]]>
+      </docs>
+      <value name='base'/>
+      <value name='dark'/>
+      <value name='forest'/>
+      <value name='neutral'/>
+    </option>
+    <option type='list' id='MERMAIDFILE_DIRS' format='dir'>
+      <docs>
+<![CDATA[
+ The \c MERMAIDFILE_DIRS tag can be used to specify one or more directories that
+ contain Mermaid files (.mmd) that are included in the documentation (see the
+ \ref cmdmermaidfile "\\mermaidfile" command).
+]]>
+      </docs>
+    </option>
+    <option type='bool' id='USE_MERMAID' defval='0'>
+      <docs>
+<![CDATA[
+ If the \c USE_MERMAID tag is set to \c YES, Doxygen will use Mermaid instead of
+ Graphviz for auto-generated diagrams (class graphs, call graphs, include
+ dependency graphs, etc.). This requires \ref cfg_mermaid_executable "MERMAID_EXECUTABLE"
+ to be configured or \c mmdc to be available in the system PATH.
+]]>
+      </docs>
+    </option>
+    <option type='bool' id='MERMAID_CLIENT_SIDE' defval='0' depends='USE_MERMAID'>
+      <docs>
+<![CDATA[
+ If the \c MERMAID_CLIENT_SIDE tag is set to \c YES, Doxygen will embed raw Mermaid
+ diagram definitions in HTML output, to be rendered client-side by the Mermaid.js
+ library. This is only effective when \ref cfg_use_mermaid "USE_MERMAID" is enabled.
+ When disabled, diagrams are pre-rendered to SVG/PNG using the \c mmdc CLI tool.
+]]>
+      </docs>
+    </option>
+    <option type='bool' id='MERMAID_OUTPUT_RAW' defval='0'>
+      <docs>
+<![CDATA[
+ If the \c MERMAID_OUTPUT_RAW tag is set to \c YES, Doxygen will output raw Mermaid
+ syntax in code blocks instead of rendering to images. This is useful for
+ AI-readable documentation where the diagram syntax itself provides valuable
+ structural information that can be parsed programmatically.
+]]>
+      </docs>
+    </option>
     <option type='int' id='DOT_GRAPH_MAX_NODES' minval='0' maxval='10000' defval='50' depends='HAVE_DOT'>
       <docs>
 <![CDATA[
