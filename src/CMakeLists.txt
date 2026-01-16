@@ -283,6 +283,7 @@ add_library(doxymain STATIC
     mandocvisitor.cpp
     mangen.cpp
     markdown.cpp
+    mermaid.cpp
     memberdef.cpp
     membergroup.cpp
     memberlist.cpp
