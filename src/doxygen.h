@@ -136,6 +136,7 @@ class Doxygen
     static DefinesPerFileList        macroDefinitions;
     static bool                      clangAssistedParsing;
     static QCString                  verifiedDotPath;
+    static QCString                  verifiedMermaidPath;
     static InputFileEncodingList     inputFileEncodingList;
     static std::mutex                countFlowKeywordsMutex;
     static std::mutex                addExampleMutex;

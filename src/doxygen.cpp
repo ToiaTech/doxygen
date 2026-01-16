@@ -178,6 +178,7 @@ bool                  Doxygen::generatingXmlOutput = FALSE;
 DefinesPerFileList    Doxygen::macroDefinitions;
 bool                  Doxygen::clangAssistedParsing = FALSE;
 QCString              Doxygen::verifiedDotPath;
+QCString              Doxygen::verifiedMermaidPath;
 InputFileEncodingList Doxygen::inputFileEncodingList;
 std::mutex            Doxygen::countFlowKeywordsMutex;
 std::mutex            Doxygen::addExampleMutex;
@@ -10339,6 +10340,46 @@ static void computeVerifiedDotPath()
 
 //----------------------------------------------------------------------------
 
+static void computeVerifiedMermaidPath()
+{
+  // check mermaid executable path
+  QCString mermaidPath = Config_getString(MERMAID_EXECUTABLE);
+  if (!mermaidPath.isEmpty())
+  {
+    FileInfo fi(mermaidPath.str());
+    if (!(fi.exists() && fi.isFile())) // not an existing user specified path + exec
+    {
+      // Try appending the executable name if it's a directory
+      QCString mermaidExe = mermaidPath + "/mmdc" + Portable::commandExtension();
+      FileInfo dp(mermaidExe.str());
+      if (dp.exists() && dp.isFile())
+      {
+        mermaidPath = mermaidExe;
+      }
+      else
+      {
+        warn_uncond("the mermaid-cli tool (mmdc) could not be found at '{}'\n", mermaidPath);
+        mermaidPath = "mmdc";
+        mermaidPath += Portable::commandExtension();
+      }
+    }
+#if defined(_WIN32) // convert slashes
+    size_t l = mermaidPath.length();
+    for (size_t i = 0; i < l; i++) if (mermaidPath.at(i) == '/') mermaidPath.at(i) = '\\';
+#endif
+  }
+  else
+  {
+    // Default to mmdc in PATH
+    mermaidPath = "mmdc";
+    mermaidPath += Portable::commandExtension();
+  }
+  Doxygen::verifiedMermaidPath = mermaidPath;
+  TRACE("{}", Doxygen::verifiedMermaidPath);
+}
+
+//----------------------------------------------------------------------------
+
 /*! Generate a template version of the configuration file.
  *  If the \a shortList parameter is TRUE a configuration file without
  *  comments will be generated.
@@ -12488,6 +12529,7 @@ void parseInput()
   msg("Doxygen version used: {}\n",versionString);
 
   computeVerifiedDotPath();
+  computeVerifiedMermaidPath();
 
   /**************************************************************************
    *            Make sure the output directory exists
