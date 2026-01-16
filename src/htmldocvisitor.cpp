@@ -652,17 +652,44 @@ void HtmlDocVisitor::operator()(const DocVerbatim &s)
     case DocVerbatim::Mermaid:
       {
         forceEndParagraph(s);
-        QCString htmlOutput = Config_getString(HTML_OUTPUT);
-        MermaidManager::OutputFormat format = MermaidManager::getOutputFormat();
-        auto baseNameVector = MermaidManager::instance().writeMermaidSource(
-                                    htmlOutput,s.exampleFile(),
-                                    s.text(),format,s.srcFile(),s.srcLine(),true);
-        for (const auto &baseName: baseNameVector)
+        bool clientSide = Config_getBool(MERMAID_CLIENT_SIDE);
+        bool rawOutput = Config_getBool(MERMAID_OUTPUT_RAW);
+
+        if (rawOutput)
         {
+          // Output raw mermaid syntax in a code block (for AI-readable docs)
           m_t << "<div class=\"mermaidgraph\">\n";
-          writeMermaidFile(baseName,s.relPath(),s.context(),s.srcFile(),s.srcLine());
+          m_t << "<pre class=\"mermaid-raw\"><code>\n";
+          m_t << convertToHtml(s.text());
+          m_t << "</code></pre>\n";
           visitCaption(m_t, s);
           m_t << "</div>\n";
+        }
+        else if (clientSide)
+        {
+          // Output raw mermaid for client-side rendering via mermaid.js
+          m_t << "<div class=\"mermaidgraph\">\n";
+          m_t << "<pre class=\"mermaid\">\n";
+          m_t << s.text();
+          m_t << "</pre>\n";
+          visitCaption(m_t, s);
+          m_t << "</div>\n";
+        }
+        else
+        {
+          // Pre-render to images using mmdc
+          QCString htmlOutput = Config_getString(HTML_OUTPUT);
+          MermaidManager::OutputFormat format = MermaidManager::getOutputFormat();
+          auto baseNameVector = MermaidManager::instance().writeMermaidSource(
+                                      htmlOutput,s.exampleFile(),
+                                      s.text(),format,s.srcFile(),s.srcLine(),true);
+          for (const auto &baseName: baseNameVector)
+          {
+            m_t << "<div class=\"mermaidgraph\">\n";
+            writeMermaidFile(baseName,s.relPath(),s.context(),s.srcFile(),s.srcLine());
+            visitCaption(m_t, s);
+            m_t << "</div>\n";
+          }
         }
         forceStartParagraph(s);
       }
@@ -1864,27 +1891,66 @@ void HtmlDocVisitor::operator()(const DocMermaidFile &df)
   if (m_hide) return;
   if (!Config_getBool(DOT_CLEANUP)) copyFile(df.file(),Config_getString(HTML_OUTPUT)+"/"+stripPath(df.file()));
   forceEndParagraph(df);
-  QCString htmlOutput = Config_getString(HTML_OUTPUT);
-  MermaidManager::OutputFormat format = MermaidManager::getOutputFormat();
+
+  bool clientSide = Config_getBool(MERMAID_CLIENT_SIDE);
+  bool rawOutput = Config_getBool(MERMAID_OUTPUT_RAW);
+
   std::string inBuf;
   readInputFile(df.file(),inBuf);
-  auto baseNameVector = MermaidManager::instance().writeMermaidSource(htmlOutput,QCString(),
-                                    inBuf,format,df.srcFile(),df.srcLine(),false);
-  for (const auto &bName: baseNameVector)
+
+  if (rawOutput)
   {
-    QCString baseName=makeBaseName(bName,".mmd");
+    // Output raw mermaid syntax in a code block (for AI-readable docs)
     m_t << "<div class=\"mermaidgraph\">\n";
-    writeMermaidFile(baseName,df.relPath(),QCString(),df.srcFile(),df.srcLine());
+    m_t << "<pre class=\"mermaid-raw\"><code>\n";
+    m_t << convertToHtml(inBuf);
+    m_t << "</code></pre>\n";
     if (df.hasCaption())
     {
       m_t << "<div class=\"caption\">\n";
-    }
-    visitChildren(df);
-    if (df.hasCaption())
-    {
+      visitChildren(df);
       m_t << "</div>\n";
     }
     m_t << "</div>\n";
+  }
+  else if (clientSide)
+  {
+    // Output raw mermaid for client-side rendering via mermaid.js
+    m_t << "<div class=\"mermaidgraph\">\n";
+    m_t << "<pre class=\"mermaid\">\n";
+    m_t << inBuf;
+    m_t << "</pre>\n";
+    if (df.hasCaption())
+    {
+      m_t << "<div class=\"caption\">\n";
+      visitChildren(df);
+      m_t << "</div>\n";
+    }
+    m_t << "</div>\n";
+  }
+  else
+  {
+    // Pre-render to images using mmdc
+    QCString htmlOutput = Config_getString(HTML_OUTPUT);
+    MermaidManager::OutputFormat format = MermaidManager::getOutputFormat();
+    auto baseNameVector = MermaidManager::instance().writeMermaidSource(htmlOutput,QCString(),
+                                      inBuf,format,df.srcFile(),df.srcLine(),false);
+    for (const auto &bName: baseNameVector)
+    {
+      QCString baseName=makeBaseName(bName,".mmd");
+      m_t << "<div class=\"mermaidgraph\">\n";
+      writeMermaidFile(baseName,df.relPath(),QCString(),df.srcFile(),df.srcLine());
+      if (df.hasCaption())
+      {
+        m_t << "<div class=\"caption\">\n";
+      }
+      visitChildren(df);
+      if (df.hasCaption())
+      {
+        m_t << "</div>\n";
+      }
+      m_t << "</div>\n";
+    }
   }
   forceStartParagraph(df);
 }
