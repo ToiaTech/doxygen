@@ -284,6 +284,7 @@ add_library(doxymain STATIC
     mangen.cpp
     markdown.cpp
     mermaid.cpp
+    mermaidgraph.cpp
     memberdef.cpp
     membergroup.cpp
     memberlist.cpp
