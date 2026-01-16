@@ -36,6 +36,7 @@
 #include "htmlentity.h"
 #include "emoji.h"
 #include "plantuml.h"
+#include "mermaid.h"
 #include "fileinfo.h"
 #include "regex.h"
 #include "portable.h"
@@ -495,6 +496,25 @@ void LatexDocVisitor::operator()(const DocVerbatim &s)
         for (const auto &baseName: baseNameVector)
         {
           writePlantUMLFile(baseName, s);
+        }
+      }
+      break;
+    case DocVerbatim::Mermaid:
+      {
+        QCString latexOutput = Config_getString(LATEX_OUTPUT);
+        MermaidManager::OutputFormat format = MermaidManager::getOutputFormat();
+        // For LaTeX, prefer PDF or PNG over SVG
+        if (format == MermaidManager::MERMAID_SVG)
+        {
+          format = MermaidManager::MERMAID_PDF;
+        }
+        auto baseNameVector = MermaidManager::instance().writeMermaidSource(
+                              latexOutput,s.exampleFile(),s.text(),
+                              format,s.srcFile(),s.srcLine(),true);
+
+        for (const auto &baseName: baseNameVector)
+        {
+          writeMermaidFile(baseName, s, format);
         }
       }
       break;
@@ -1997,6 +2017,19 @@ void LatexDocVisitor::writePlantUMLFile(const QCString &baseName, const DocVerba
   QCString outDir = Config_getString(LATEX_OUTPUT);
   PlantumlManager::instance().generatePlantUMLOutput(baseName,outDir,
                               s.useBitmap() ? PlantumlManager::PUML_BITMAP : PlantumlManager::PUML_EPS);
+  visitPreStart(m_t, s.hasCaption(), shortName, s.width(), s.height());
+  visitCaption(s.children());
+  visitPostEnd(m_t, s.hasCaption());
+}
+
+void LatexDocVisitor::writeMermaidFile(const QCString &baseName, const DocVerbatim &s,
+                                       MermaidManager::OutputFormat format)
+{
+  QCString shortName = stripPath(baseName);
+  QCString ext = MermaidManager::getExtension(format);
+  if (shortName.find('.')==-1) shortName += ext;
+  QCString outDir = Config_getString(LATEX_OUTPUT);
+  MermaidManager::instance().generateMermaidOutput(baseName,outDir,format);
   visitPreStart(m_t, s.hasCaption(), shortName, s.width(), s.height());
   visitCaption(s.children());
   visitPostEnd(m_t, s.hasCaption());

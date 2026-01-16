@@ -647,6 +647,7 @@ void PerlModDocVisitor::operator()(const DocVerbatim &s)
     case DocVerbatim::Dot:       type = "dot";          break;
     case DocVerbatim::Msc:       type = "msc";          break;
     case DocVerbatim::PlantUML:  type = "plantuml";     break;
+    case DocVerbatim::Mermaid:   type = "mermaid";      break;
   }
   openItem(type);
   if (s.hasCaption())

@@ -31,6 +31,7 @@
 #include "htmlentity.h"
 #include "emoji.h"
 #include "plantuml.h"
+#include "mermaid.h"
 #include "fileinfo.h"
 #include "portable.h"
 #include "codefragment.h"
@@ -394,6 +395,21 @@ DB_VIS_C
         {
           m_t << "<para>\n";
           writePlantUMLFile(baseName,s);
+          m_t << "</para>\n";
+        }
+      }
+      break;
+    case DocVerbatim::Mermaid:
+      {
+        QCString docbookOutput = Config_getString(DOCBOOK_OUTPUT);
+        // For docbook, use PNG format
+        auto baseNameVector = MermaidManager::instance().writeMermaidSource(docbookOutput,
+            s.exampleFile(),s.text(),MermaidManager::MERMAID_PNG,
+            s.srcFile(),s.srcLine(),true);
+        for (const auto &baseName: baseNameVector)
+        {
+          m_t << "<para>\n";
+          writeMermaidFile(baseName,s);
           m_t << "</para>\n";
         }
       }
@@ -1548,6 +1564,17 @@ DB_VIS_C
   QCString shortName = stripPath(baseName);
   QCString outDir = Config_getString(DOCBOOK_OUTPUT);
   PlantumlManager::instance().generatePlantUMLOutput(baseName,outDir,PlantumlManager::PUML_BITMAP);
+  visitPreStart(m_t, s.children(), s.hasCaption(), s.relPath() + shortName + ".png", s.width(),s.height());
+  visitCaption(s.children());
+  visitPostEnd(m_t, s.hasCaption());
+}
+
+void DocbookDocVisitor::writeMermaidFile(const QCString &baseName, const DocVerbatim &s)
+{
+DB_VIS_C
+  QCString shortName = stripPath(baseName);
+  QCString outDir = Config_getString(DOCBOOK_OUTPUT);
+  MermaidManager::instance().generateMermaidOutput(baseName,outDir,MermaidManager::MERMAID_PNG);
   visitPreStart(m_t, s.children(), s.hasCaption(), s.relPath() + shortName + ".png", s.width(),s.height());
   visitCaption(s.children());
   visitPostEnd(m_t, s.hasCaption());

@@ -247,6 +247,7 @@ void ManDocVisitor::operator()(const DocVerbatim &s)
     case DocVerbatim::Dot:
     case DocVerbatim::Msc:
     case DocVerbatim::PlantUML:
+    case DocVerbatim::Mermaid:
       /* nothing */
       break;
   }

@@ -4718,6 +4718,54 @@ Token DocPara::handleCommand(char cmdChar, const QCString &cmdName)
         parser()->tokenizer.setStatePara();
       }
       break;
+    case CommandType::CMD_STARTMERMAID:
+      {
+        QCString mermaidExe = Config_getString(MERMAID_EXECUTABLE);
+        parser()->tokenizer.setStateMermaidOpt();
+        parser()->tokenizer.lex();
+        QCString fullMatch = parser()->context.token->sectionId;
+        QCString sectionId = fullMatch.stripWhiteSpace();
+
+        if (sectionId.isEmpty())
+        {
+          parser()->tokenizer.setStateMermaidOpt();
+          retval = parser()->tokenizer.lex();
+          assert(retval.is(TokenRetval::RetVal_OK));
+
+          sectionId = parser()->context.token->sectionId;
+          sectionId = sectionId.stripWhiteSpace();
+        }
+
+        QCString mermaidFile(sectionId);
+        children().append<DocVerbatim>(parser(),thisVariant(),
+                                       parser()->context.context,
+                                       parser()->context.token->verb,
+                                       DocVerbatim::Mermaid,
+                                       FALSE,mermaidFile);
+        DocVerbatim *dv = children().get_last<DocVerbatim>();
+        parser()->tokenizer.setStatePara();
+        QCString width,height;
+        parser()->defaultHandleTitleAndSize(CommandType::CMD_STARTMERMAID,&children().back(),dv->children(),width,height);
+        parser()->tokenizer.setStateMermaid();
+        retval = parser()->tokenizer.lex();
+        int line = 0;
+        QCString trimmedVerb = stripLeadingAndTrailingEmptyLines(parser()->context.token->verb,line);
+        dv->setText(trimmedVerb);
+        dv->setWidth(width);
+        dv->setHeight(height);
+        dv->setLocation(parser()->context.fileName,parser()->tokenizer.getLineNr());
+        if (mermaidExe.isEmpty())
+        {
+          warn_doc_error(parser()->context.fileName,parser()->tokenizer.getLineNr(),"ignoring \\startmermaid command because MERMAID_EXECUTABLE is not set");
+          children().pop_back();
+        }
+        if (retval.is_any_of(TokenRetval::TK_NONE,TokenRetval::TK_EOF))
+        {
+          warn_doc_error(parser()->context.fileName,parser()->tokenizer.getLineNr(),"startmermaid section ended without end marker");
+        }
+        parser()->tokenizer.setStatePara();
+      }
+      break;
     case CommandType::CMD_ENDPARBLOCK:
       retval = Token::make_RetVal_EndParBlock();
       break;
@@ -4736,6 +4784,7 @@ Token DocPara::handleCommand(char cmdChar, const QCString &cmdName)
     case CommandType::CMD_ENDDOT:
     case CommandType::CMD_ENDMSC:
     case CommandType::CMD_ENDUML:
+    case CommandType::CMD_ENDMERMAID:
       warn_doc_error(parser()->context.fileName,parser()->tokenizer.getLineNr(),"unexpected command {}",parser()->context.token->name);
       break;
     case CommandType::CMD_PARAM:

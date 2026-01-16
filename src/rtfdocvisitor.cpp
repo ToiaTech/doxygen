@@ -34,6 +34,7 @@
 #include "htmlentity.h"
 #include "emoji.h"
 #include "plantuml.h"
+#include "mermaid.h"
 #include "fileinfo.h"
 #include "portable.h"
 #include "codefragment.h"
@@ -396,6 +397,22 @@ void RTFDocVisitor::operator()(const DocVerbatim &s)
         for (const auto &baseName: baseNameVector)
         {
           writePlantUMLFile(baseName, s.hasCaption());
+          visitChildren(s);
+          includePicturePostRTF(true, s.hasCaption());
+        }
+      }
+      break;
+    case DocVerbatim::Mermaid:
+      {
+        QCString rtfOutput = Config_getString(RTF_OUTPUT);
+        // For RTF, use PNG format
+        auto baseNameVector = MermaidManager::instance().writeMermaidSource(
+                       rtfOutput,s.exampleFile(),s.text(),MermaidManager::MERMAID_PNG,
+                       s.srcFile(),s.srcLine(),true);
+
+        for (const auto &baseName: baseNameVector)
+        {
+          writeMermaidFile(baseName, s.hasCaption());
           visitChildren(s);
           includePicturePostRTF(true, s.hasCaption());
         }
@@ -1765,5 +1782,13 @@ void RTFDocVisitor::writePlantUMLFile(const QCString &fileName, bool hasCaption)
   QCString baseName=makeBaseName(fileName,".pu");
   QCString outDir = Config_getString(RTF_OUTPUT);
   PlantumlManager::instance().generatePlantUMLOutput(fileName,outDir,PlantumlManager::PUML_BITMAP);
+  includePicturePreRTF(baseName + ".png", true, hasCaption);
+}
+
+void RTFDocVisitor::writeMermaidFile(const QCString &fileName, bool hasCaption)
+{
+  QCString baseName=makeBaseName(fileName,".mmd");
+  QCString outDir = Config_getString(RTF_OUTPUT);
+  MermaidManager::instance().generateMermaidOutput(fileName,outDir,MermaidManager::MERMAID_PNG);
   includePicturePreRTF(baseName + ".png", true, hasCaption);
 }

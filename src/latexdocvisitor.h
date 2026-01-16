@@ -21,6 +21,7 @@
 #include "qcstring.h"
 #include "docvisitor.h"
 #include "docnode.h"
+#include "mermaid.h"
 
 class OutputCodeList;
 class LatexCodeGenerator;
@@ -155,6 +156,8 @@ class LatexDocVisitor : public DocVisitor
                       const QCString &srcFile,int srcLine,bool newFile = true);
     void endDiaFile(bool hasCaption);
     void writePlantUMLFile(const QCString &fileName, const DocVerbatim &s);
+    void writeMermaidFile(const QCString &fileName, const DocVerbatim &s,
+                          MermaidManager::OutputFormat format);
     void startPlantUmlFile(const QCString &fileName,const QCString &width,
                       const QCString &height, bool hasCaption,
                       const QCString &srcFile,int srcLine);

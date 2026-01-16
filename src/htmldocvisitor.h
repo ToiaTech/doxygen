@@ -131,6 +131,8 @@ class HtmlDocVisitor : public DocVisitor
                       const QCString &srcFile,int srcLine, bool newFile = true);
     void writePlantUMLFile(const QCString &fileName,const QCString &relPath,const QCString &context,
                            const QCString &srcFile,int srcLine);
+    void writeMermaidFile(const QCString &fileName,const QCString &relPath,const QCString &context,
+                          const QCString &srcFile,int srcLine);
 
     template<class DocNode>
     void forceEndParagraph(const DocNode &n);

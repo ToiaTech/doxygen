@@ -301,6 +301,8 @@ SHOWDATE ([0-9]{4}"-"[0-9]{1,2}"-"[0-9]{1,2})?({WS}*[0-9]{1,2}":"[0-9]{1,2}(":"[
 %x St_Msc
 %x St_PlantUMLOpt
 %x St_PlantUML
+%x St_MermaidOpt
+%x St_Mermaid
 %x St_Param
 %x St_XRefItem
 %x St_XRefItem2
@@ -940,6 +942,38 @@ SHOWDATE ([0-9]{4}"-"[0-9]{1,2}"-"[0-9]{1,2})?({WS}*[0-9]{1,2}":"[0-9]{1,2}(":"[
 <St_PlantUML>[^\\@\n]+ |
 <St_PlantUML>\n        |
 <St_PlantUML>.         { /* plantuml text */
+                         lineCount(yytext,yyleng);
+                         yyextra->token.verb+=yytext;
+                       }
+<St_MermaidOpt>{BLANK}*{FILEMASK}{BLANK}+/{ID}"=" { // file name followed by attribute
+                         yyextra->token.sectionId = QCString(yytext).stripWhiteSpace();
+                         return Token::make_RetVal_OK();
+                       }
+<St_MermaidOpt>{BLANK}*{FILEMASK}{BLANK}+/"\"" { // file name followed by quoted title
+                         yyextra->token.sectionId = QCString(yytext).stripWhiteSpace();
+                         return Token::make_RetVal_OK();
+                       }
+<St_MermaidOpt>{BLANK}*{FILEMASK}{BLANKopt}/\n { // file name without title
+                         yyextra->token.sectionId = QCString(yytext).stripWhiteSpace();
+                         return Token::make_RetVal_OK();
+                       }
+<St_MermaidOpt>{BLANK}*{FILEMASK}{BLANKopt}/"\\ilinebr" { // file name without title
+                         yyextra->token.sectionId = QCString(yytext).stripWhiteSpace();
+                         return Token::make_RetVal_OK();
+                       }
+<St_MermaidOpt>"\\ilinebr" |
+<St_MermaidOpt>"\n"    |
+<St_MermaidOpt>.       {
+                         yyextra->token.sectionId = "";
+                         unput_string(yytext,yyleng);
+                         return Token::make_RetVal_OK();
+                       }
+<St_Mermaid>{CMD}"endmermaid" {
+                         return Token::make_RetVal_OK();
+                       }
+<St_Mermaid>[^\\@\n]+  |
+<St_Mermaid>\n         |
+<St_Mermaid>.          { /* mermaid text */
                          lineCount(yytext,yyleng);
                          yyextra->token.verb+=yytext;
                        }
@@ -2001,6 +2035,23 @@ void DocTokenizer::setStatePlantUML()
   struct yyguts_t *yyg = (struct yyguts_t*)yyscanner;
   yyextra->token.verb="";
   BEGIN(St_PlantUML);
+}
+
+void DocTokenizer::setStateMermaidOpt()
+{
+  yyscan_t yyscanner = p->yyscanner;
+  struct yyguts_t *yyg = (struct yyguts_t*)yyscanner;
+  yyextra->token.verb="";
+  yyextra->token.sectionId="";
+  BEGIN(St_MermaidOpt);
+}
+
+void DocTokenizer::setStateMermaid()
+{
+  yyscan_t yyscanner = p->yyscanner;
+  struct yyguts_t *yyg = (struct yyguts_t*)yyscanner;
+  yyextra->token.verb="";
+  BEGIN(St_Mermaid);
 }
 
 void DocTokenizer::setStateParam()

@@ -130,6 +130,7 @@ class DocbookDocVisitor : public DocVisitor
     void endDotFile(bool hasCaption);
     void writeDotFile(const QCString &fileName, const DocVerbatim &s, bool newFile = true);
     void writePlantUMLFile(const QCString &fileName, const DocVerbatim &s);
+    void writeMermaidFile(const QCString &fileName, const DocVerbatim &s);
     void startPlantUmlFile(const QCString &fileName,const QCString &relPath, const QCString &width,
                       const QCString &height, bool hasCaption,const DocNodeList &children,
                       const QCString &srcFile, int srcLine);

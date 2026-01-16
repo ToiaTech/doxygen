@@ -390,6 +390,11 @@ void XmlDocVisitor::operator()(const DocVerbatim &s)
       filter(s.text());
       visitPostEnd(m_t, "plantuml");
       break;
+    case DocVerbatim::Mermaid:
+      visitPreStart(m_t, "mermaid", s.hasCaption(), *this, s.children(),  QCString(""), FALSE, DocImage::Html, s.width(), s.height());
+      filter(s.text());
+      visitPostEnd(m_t, "mermaid");
+      break;
   }
 }
 

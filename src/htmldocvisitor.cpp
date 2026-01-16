@@ -33,6 +33,7 @@
 #include "htmlentity.h"
 #include "emoji.h"
 #include "plantuml.h"
+#include "mermaid.h"
 #include "formula.h"
 #include "fileinfo.h"
 #include "indexlist.h"
@@ -642,6 +643,24 @@ void HtmlDocVisitor::operator()(const DocVerbatim &s)
         {
           m_t << "<div class=\"plantumlgraph\">\n";
           writePlantUMLFile(baseName,s.relPath(),s.context(),s.srcFile(),s.srcLine());
+          visitCaption(m_t, s);
+          m_t << "</div>\n";
+        }
+        forceStartParagraph(s);
+      }
+      break;
+    case DocVerbatim::Mermaid:
+      {
+        forceEndParagraph(s);
+        QCString htmlOutput = Config_getString(HTML_OUTPUT);
+        MermaidManager::OutputFormat format = MermaidManager::getOutputFormat();
+        auto baseNameVector = MermaidManager::instance().writeMermaidSource(
+                                    htmlOutput,s.exampleFile(),
+                                    s.text(),format,s.srcFile(),s.srcLine(),true);
+        for (const auto &baseName: baseNameVector)
+        {
+          m_t << "<div class=\"mermaidgraph\">\n";
+          writeMermaidFile(baseName,s.relPath(),s.context(),s.srcFile(),s.srcLine());
           visitCaption(m_t, s);
           m_t << "</div>\n";
         }
@@ -2240,6 +2259,26 @@ void HtmlDocVisitor::writePlantUMLFile(const QCString &fileName, const QCString 
   {
     PlantumlManager::instance().generatePlantUMLOutput(fileName,outDir,PlantumlManager::PUML_BITMAP);
     m_t << "<img src=\"" << relPath << baseName << ".png" << "\" />\n";
+  }
+}
+
+void HtmlDocVisitor::writeMermaidFile(const QCString &fileName, const QCString &relPath,
+                                      const QCString &,const QCString &/* srcFile */,int /* srcLine */)
+{
+  QCString baseName=makeBaseName(fileName,".mmd");
+  QCString outDir = Config_getString(HTML_OUTPUT);
+  MermaidManager::OutputFormat format = MermaidManager::getOutputFormat();
+  QCString imgExt = MermaidManager::getExtension(format);
+
+  MermaidManager::instance().generateMermaidOutput(fileName,outDir,format);
+
+  if (format == MermaidManager::MERMAID_SVG)
+  {
+    m_t << "<object type=\"image/svg+xml\" data=\"" << relPath << baseName << imgExt << "\"></object>\n";
+  }
+  else
+  {
+    m_t << "<img src=\"" << relPath << baseName << imgExt << "\" />\n";
   }
 }
 

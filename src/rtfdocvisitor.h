@@ -132,6 +132,7 @@ class RTFDocVisitor : public DocVisitor
     void writeMscFile(const QCString &fileName, bool hasCaption,const QCString &srcFile,int srcLine,bool newFile = true);
     void writeDiaFile(const QCString &fileName, bool hasCaption,const QCString &srcFile,int srcLine,bool newFile = true);
     void writePlantUMLFile(const QCString &fileName, bool hasCaption);
+    void writeMermaidFile(const QCString &fileName, bool hasCaption);
 
     //--------------------------------------
     // state variables
