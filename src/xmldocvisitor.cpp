@@ -1005,6 +1005,15 @@ void XmlDocVisitor::operator()(const DocPlantUmlFile &df)
   visitPostEnd(m_t, "plantumlfile");
 }
 
+void XmlDocVisitor::operator()(const DocMermaidFile &df)
+{
+  if (m_hide) return;
+  copyFile(df.file(),Config_getString(XML_OUTPUT)+"/"+stripPath(df.file()));
+  visitPreStart(m_t, "mermaidfile", FALSE, *this, df.children(), stripPath(df.file()), FALSE, DocImage::Html, df.width(), df.height());
+  visitChildren(df);
+  visitPostEnd(m_t, "mermaidfile");
+}
+
 void XmlDocVisitor::operator()(const DocLink &lnk)
 {
   if (m_hide) return;

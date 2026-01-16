@@ -1564,6 +1564,32 @@ void LatexDocVisitor::operator()(const DocPlantUmlFile &df)
   endPlantUmlFile(df.hasCaption());
 }
 
+void LatexDocVisitor::operator()(const DocMermaidFile &df)
+{
+  if (m_hide) return;
+  if (!Config_getBool(DOT_CLEANUP)) copyFile(df.file(),Config_getString(LATEX_OUTPUT)+"/"+stripPath(df.file()));
+  QCString outDir = Config_getString(LATEX_OUTPUT);
+  MermaidManager::OutputFormat format = MermaidManager::MERMAID_PDF;
+  std::string inBuf;
+  readInputFile(df.file(),inBuf);
+  auto baseNameVector = MermaidManager::instance().writeMermaidSource(outDir,QCString(),
+                                    inBuf,format,df.srcFile(),df.srcLine(),false);
+  bool first = true;
+  for (const auto &bName: baseNameVector)
+  {
+    QCString baseName=makeBaseName(bName,".mmd");
+    QCString shortName = stripPath(baseName);
+    QCString ext = MermaidManager::getExtension(format);
+    if (shortName.find('.')==-1) shortName += ext;
+    MermaidManager::instance().generateMermaidOutput(baseName,outDir,format);
+    if (!first) visitPostEnd(m_t, df.hasCaption());
+    first = false;
+    visitPreStart(m_t, df.hasCaption(), shortName, df.width(), df.height());
+  }
+  visitChildren(df);
+  visitPostEnd(m_t, df.hasCaption());
+}
+
 void LatexDocVisitor::operator()(const DocLink &lnk)
 {
   if (m_hide) return;

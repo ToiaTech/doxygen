@@ -1305,6 +1305,31 @@ DB_VIS_C
   endPlantUmlFile(df.hasCaption());
 }
 
+void DocbookDocVisitor::operator()(const DocMermaidFile &df)
+{
+DB_VIS_C
+  if (m_hide) return;
+  if (!Config_getBool(DOT_CLEANUP)) copyFile(df.file(),Config_getString(DOCBOOK_OUTPUT)+"/"+stripPath(df.file()));
+  QCString outDir = Config_getString(DOCBOOK_OUTPUT);
+  std::string inBuf;
+  readInputFile(df.file(),inBuf);
+  auto baseNameVector = MermaidManager::instance().writeMermaidSource(outDir,QCString(),
+                                    inBuf,MermaidManager::MERMAID_PNG,df.srcFile(),df.srcLine(),false);
+  bool first = true;
+  for (const auto &bName: baseNameVector)
+  {
+    QCString baseName=makeBaseName(bName,".mmd");
+    MermaidManager::instance().generateMermaidOutput(baseName,outDir,MermaidManager::MERMAID_PNG);
+    if (!first) visitPostEnd(m_t, df.hasCaption());
+    first = false;
+    m_t << "<para>\n";
+    visitPreStart(m_t, df.children(), df.hasCaption(), df.relPath() + baseName + ".png", df.width(), df.height());
+  }
+  visitChildren(df);
+  visitPostEnd(m_t, df.hasCaption());
+  m_t << "</para>\n";
+}
+
 void DocbookDocVisitor::operator()(const DocLink &lnk)
 {
 DB_VIS_C

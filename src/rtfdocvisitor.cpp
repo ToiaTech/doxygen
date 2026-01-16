@@ -1337,6 +1337,24 @@ void RTFDocVisitor::operator()(const DocPlantUmlFile &df)
   }
 }
 
+void RTFDocVisitor::operator()(const DocMermaidFile &df)
+{
+  DBG_RTF("{\\comment RTFDocVisitor::operator()(const DocMermaidFile &)}\n");
+  if (!Config_getBool(DOT_CLEANUP)) copyFile(df.file(),Config_getString(RTF_OUTPUT)+"/"+stripPath(df.file()));
+  QCString rtfOutput = Config_getString(RTF_OUTPUT);
+  std::string inBuf;
+  readInputFile(df.file(),inBuf);
+  auto baseNameVector = MermaidManager::instance().writeMermaidSource(
+                       rtfOutput,QCString(),inBuf,MermaidManager::MERMAID_PNG,
+                       df.srcFile(),df.srcLine(),false);
+  for(const auto &baseName: baseNameVector)
+  {
+    writeMermaidFile(baseName, df.hasCaption());
+    visitChildren(df);
+    includePicturePostRTF(true, df.hasCaption());
+  }
+}
+
 void RTFDocVisitor::operator()(const DocLink &lnk)
 {
   if (m_hide) return;

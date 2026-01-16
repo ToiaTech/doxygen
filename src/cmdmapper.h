@@ -165,7 +165,8 @@ enum class CommandType
   CMD_QUESTION     = 133,
   CMD_REQUIREMENT  = 134 | SIMPLESECT_BIT,
   CMD_STARTMERMAID = 135,
-  CMD_ENDMERMAID   = 136
+  CMD_ENDMERMAID   = 136,
+  CMD_MERMAIDFILE  = 137
 };
 
 enum class HtmlTagType

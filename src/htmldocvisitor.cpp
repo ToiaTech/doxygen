@@ -1859,6 +1859,36 @@ void HtmlDocVisitor::operator()(const DocPlantUmlFile &df)
   forceStartParagraph(df);
 }
 
+void HtmlDocVisitor::operator()(const DocMermaidFile &df)
+{
+  if (m_hide) return;
+  if (!Config_getBool(DOT_CLEANUP)) copyFile(df.file(),Config_getString(HTML_OUTPUT)+"/"+stripPath(df.file()));
+  forceEndParagraph(df);
+  QCString htmlOutput = Config_getString(HTML_OUTPUT);
+  MermaidManager::OutputFormat format = MermaidManager::getOutputFormat();
+  std::string inBuf;
+  readInputFile(df.file(),inBuf);
+  auto baseNameVector = MermaidManager::instance().writeMermaidSource(htmlOutput,QCString(),
+                                    inBuf,format,df.srcFile(),df.srcLine(),false);
+  for (const auto &bName: baseNameVector)
+  {
+    QCString baseName=makeBaseName(bName,".mmd");
+    m_t << "<div class=\"mermaidgraph\">\n";
+    writeMermaidFile(baseName,df.relPath(),QCString(),df.srcFile(),df.srcLine());
+    if (df.hasCaption())
+    {
+      m_t << "<div class=\"caption\">\n";
+    }
+    visitChildren(df);
+    if (df.hasCaption())
+    {
+      m_t << "</div>\n";
+    }
+    m_t << "</div>\n";
+  }
+  forceStartParagraph(df);
+}
+
 void HtmlDocVisitor::operator()(const DocLink &lnk)
 {
   if (m_hide) return;

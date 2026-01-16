@@ -627,6 +627,14 @@ class PrintDocVisitor
       indent_post();
       printf("</plantumlfile>\n");
     }
+    void operator()(const DocMermaidFile &df)
+    {
+      indent_pre();
+      printf("<mermaidfile src=\"%s\">\n",qPrint(df.name()));
+      visitChildren(df);
+      indent_post();
+      printf("</mermaidfile>\n");
+    }
     void operator()(const DocLink &lnk)
     {
       indent_pre();

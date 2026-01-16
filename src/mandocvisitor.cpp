@@ -835,6 +835,10 @@ void ManDocVisitor::operator()(const DocPlantUmlFile &)
 {
 }
 
+void ManDocVisitor::operator()(const DocMermaidFile &)
+{
+}
+
 void ManDocVisitor::operator()(const DocLink &dl)
 {
   if (m_hide) return;

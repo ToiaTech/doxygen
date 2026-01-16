@@ -1281,6 +1281,46 @@ bool DocPlantUmlFile::parse()
 
 //---------------------------------------------------------------------------
 
+DocMermaidFile::DocMermaidFile(DocParser *parser,DocNodeVariant *parent,const QCString &name,const QCString &context,
+                       const QCString &srcFile,int srcLine) :
+  DocDiagramFileBase(parser,parent,name,context,srcFile,srcLine)
+{
+  p->relPath = parser->context.relPath;
+}
+
+bool DocMermaidFile::parse()
+{
+  bool ok = false;
+  parser()->defaultHandleTitleAndSize(CommandType::CMD_MERMAIDFILE,thisVariant(),children(),p->width,p->height);
+
+  bool ambig = false;
+  FileDef *fd = findFileDef(Doxygen::mermaidFileNameLinkedMap,p->name,ambig);
+  if (fd==nullptr && !p->name.endsWith(".mmd")) // try with .mmd extension as well
+  {
+    fd = findFileDef(Doxygen::mermaidFileNameLinkedMap,p->name+".mmd",ambig);
+  }
+  if (fd)
+  {
+    p->file = fd->absFilePath();
+    ok = true;
+    if (ambig)
+    {
+      warn_doc_error(parser()->context.fileName,parser()->tokenizer.getLineNr(),"included mermaid file name '{}' is ambiguous.\n"
+           "Possible candidates:\n{}",p->name,
+           showFileDefMatches(Doxygen::mermaidFileNameLinkedMap,p->name)
+          );
+    }
+  }
+  else
+  {
+    warn_doc_error(parser()->context.fileName,parser()->tokenizer.getLineNr(),"included mermaid file '{}' is not found "
+           "in any of the paths specified via MERMAIDFILE_DIRS!",p->name);
+  }
+  return ok;
+}
+
+//---------------------------------------------------------------------------
+
 DocVhdlFlow::DocVhdlFlow(DocParser *parser,DocNodeVariant *parent) : DocCompoundNode(parser,parent)
 {
 }
@@ -4917,6 +4957,9 @@ Token DocPara::handleCommand(char cmdChar, const QCString &cmdName)
       break;
     case CommandType::CMD_PLANTUMLFILE:
       handleFile<DocPlantUmlFile>(cmdName);
+      break;
+    case CommandType::CMD_MERMAIDFILE:
+      handleFile<DocMermaidFile>(cmdName);
       break;
     case CommandType::CMD_LINK:
       handleLink(cmdName,FALSE);
